@@ -1,11 +1,11 @@
-#include "err.h"
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "err.hpp"
+#include <cerrno>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-void syserr(const char *fmt, ...) {
+[[ noreturn ]] void syserr(const char *fmt, ...) {
     va_list fmt_args;
     int err;
 
@@ -21,7 +21,7 @@ void syserr(const char *fmt, ...) {
     exit(EXIT_FAILURE);
 }
 
-void fatal(const char *fmt, ...) {
+[[ noreturn ]] void fatal(const char *fmt, ...) {
     va_list fmt_args;
 
     fprintf(stderr, "ERROR: ");

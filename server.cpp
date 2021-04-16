@@ -1,5 +1,19 @@
+#include "err.hpp"
+#include <cstdint>
+#include <filesystem>
+#include <string>
 
-int main(int argc, char *argv[]) {
+namespace fs = std::filesystem;
+
+constexpr unsigned DEFAULT_PORT = 8080;
+
+struct basic_configuration {
+    const fs::path filesDirectory;
+    const fs::path correlatedServersFilepath;
+    const uint16_t port;
+};
+
+basic_configuration parse_commandline_arguments(int argc, char *argv[]) {
     // serwer <nazwa-katalogu-z-plikami> <plik-z-serwerami-skorelowanymi> [<numer-portu-serwera>]
     // serwer katalog skorelowane.txt port
 
@@ -11,6 +25,50 @@ int main(int argc, char *argv[]) {
 
     // Parametr z numerem portu serwera jest parametrem opcjonalnym i wskazuje numer portu
     // na jakim serwer powinien nasłuchiwać połączeń od klientów. Domyślny numer portu to 8080.
+
+    if (argc < 3 || argc > 4) {
+        fatal("Usage: %s <files-directory> <correlated-servers-file> [port]", argv[0]);
+    }
+
+    fs::path filesDirectory;
+
+    try {
+        filesDirectory = fs::canonical(argv[1]);
+        if (!fs::is_directory(filesDirectory)) {
+            fatal("First argument must be a directory");
+        }
+    } catch (...) {
+        fatal("Could not convert files-directory argument");
+    }
+
+    fs::path correlatedServersFilepath;
+    try {
+        correlatedServersFilepath = fs::canonical(argv[2]);
+        if (!fs::is_regular_file(correlatedServersFilepath)) {
+            fatal("Second argument must be a regular file");
+        }
+    } catch (...) {
+        fatal("Could not convert correlated-servers-file argument");
+    }
+
+    uint16_t port = DEFAULT_PORT;
+    if (argc == 4) {
+        try {
+            int int_arg = std::stoi(argv[3]);
+            if (int_arg < 0 || int_arg > UINT16_MAX) {
+                throw std::out_of_range("");
+            }
+            port = static_cast<uint16_t>(int_arg);
+        } catch (...) {
+            fatal("Could not convert port argument or value out of range");
+        }
+    }
+
+    return {filesDirectory, correlatedServersFilepath, port};
+}
+
+int main(int argc, char *argv[]) {
+    basic_configuration basicConfiguration = parse_commandline_arguments(argc, argv);
 
     /*****************************************************************************************/
 
