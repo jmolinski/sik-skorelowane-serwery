@@ -15,7 +15,9 @@ endmacro()
 add_library(err err.cpp)
 
 add_executable(serwer
-        server.cpp)
+        server.cpp
+        tcp_server.cpp
+        cmd_args_parser.cpp)
 target_link_libraries(serwer stdc++fs)
 
 install(TARGETS DESTINATION .)
