@@ -48,11 +48,12 @@ std::string readline_until_delim(FILE *f, char delim) {
 
     do {
         char c = safe_fgetc(f);
-        os << c;
 
         if (c == delim) {
             return os.str();
         }
+
+        os << c;
 
         if (c == '\n') {
             if (previousCharIsCr) {

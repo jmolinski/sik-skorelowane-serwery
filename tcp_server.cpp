@@ -1,10 +1,28 @@
 #include "tcp_server.hpp"
 #include "err.hpp"
+#include "http.hpp"
+#include "input_parsing.hpp"
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
+
+void server::run_request_response_loop(FILE *stream) {
+    while (true) {
+        try {
+            http_request request(stream);
+
+            http_response response;
+            response.send(stream);
+            break;
+
+            // Resource(request.statusLine.requestTarget);
+        } catch (invalid_request_error const &e) {
+            fatal("an error occured, exceptions should be handled");
+        }
+    }
+}
 
 void server::handle_connection(int sock) {
     // Serwer po ustanowieniu połączenia z klientem oczekuje na żądanie klienta.

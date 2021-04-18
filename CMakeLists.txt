@@ -19,6 +19,7 @@ add_executable(serwer
         tcp_server.cpp
         cmd_args_parser.cpp
         input_parsing.cpp
+        http.cpp
         )
 target_link_libraries(serwer stdc++fs)
 
@@ -27,6 +28,7 @@ add_executable(test_server
         tcp_server.cpp
         cmd_args_parser.cpp
         input_parsing.cpp
+        http.cpp
         )
 target_link_libraries(test_server stdc++fs)
 
