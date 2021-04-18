@@ -18,6 +18,7 @@ class server {
 
   private:
     void handle_connection(int);
+    void run_request_response_loop(FILE *stream);
 
     basic_configuration config;
 };

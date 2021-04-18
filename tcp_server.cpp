@@ -22,16 +22,11 @@ void server::handle_connection(int sock) {
     }
 
     try {
-        while (1) {
-            std::string s = read_until_crlf(f);
-            std::cout << s;
+        run_request_response_loop(f);
+    } catch (no_request_to_read_exception const &e) {
+        if (fclose(f) == EOF) {
+            syserr("closing connection failed");
         }
-    } catch (...) {
-        std::cout << "koniec\n";
-    }
-
-    if (fclose(f) == EOF) {
-        syserr("closing connection failed");
     }
 }
 
