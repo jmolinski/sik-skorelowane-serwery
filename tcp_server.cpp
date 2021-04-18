@@ -16,8 +16,22 @@ void server::handle_connection(int sock) {
     // ewentualne kolejne żądanie tego samego klienta lub zakończenie połączenia przez
     // klienta.
 
-    if (close(sock) == -1) {
-        syserr("close on connection socket failed");
+    FILE *f = fdopen(sock, "rb");
+    if (f == nullptr) {
+        syserr("opening connection socket failed");
+    }
+
+    try {
+        while (1) {
+            std::string s = read_until_crlf(f);
+            std::cout << s;
+        }
+    } catch (...) {
+        std::cout << "koniec\n";
+    }
+
+    if (fclose(f) == EOF) {
+        syserr("closing connection failed");
     }
 }
 
@@ -28,10 +42,10 @@ void server::run() {
     }
 
     sockaddr_in server_address = {
-        .sin_family = AF_INET,           // IPv4
-        .sin_port = htons(config.port),  // Listening on port config.port.
-        .sin_addr = {htonl(INADDR_ANY)}, // Listening on all interfaces.
-        .sin_zero = {0},
+        AF_INET,             // IPv4
+        htons(config.port),  // Listening on port config.port.
+        {htonl(INADDR_ANY)}, // Listening on all interfaces.
+        {0},
     };
 
     // Bind the socket to a concrete address.
@@ -55,13 +69,10 @@ void server::run() {
             syserr("accept");
         }
 
-        if (dup2(msgsock, 0) == -1) {
-            syserr("dup2 failed");
-        }
-        if (close(msgsock) == -1) {
-            syserr("close failed");
-        }
-
         handle_connection(msgsock);
+    }
+
+    if (close(sock) == -1) {
+        syserr("close");
     }
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.1)
 project(sik_skorelowane_serwery)
 
-set(CMAKE_CXX_FLAGS "-g -Wall")
+set(CMAKE_CXX_FLAGS "-g -Wall -Wextra -Werror -Wpedantic")
 set(CMAKE_CXX_STANDARD 17)
 
 # http://stackoverflow.com/questions/10555706/
@@ -17,7 +17,17 @@ add_library(err err.cpp)
 add_executable(serwer
         server.cpp
         tcp_server.cpp
-        cmd_args_parser.cpp)
+        cmd_args_parser.cpp
+        input_parsing.cpp
+        )
 target_link_libraries(serwer stdc++fs)
+
+add_executable(test_server
+        test_server.cpp
+        tcp_server.cpp
+        cmd_args_parser.cpp
+        input_parsing.cpp
+        )
+target_link_libraries(test_server stdc++fs)
 
 install(TARGETS DESTINATION .)
