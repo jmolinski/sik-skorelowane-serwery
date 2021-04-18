@@ -33,9 +33,8 @@ void http_request::read_status_line(FILE *stream) {
     char httpVersionBuffer[HTTP_VERSION_SIZE + 1] = {0};
     safe_fread_bytes(stream, httpVersionBuffer, HTTP_VERSION_SIZE);
     if (strcmp(HTTP_VERSION, httpVersionBuffer) != 0) {
-        throw malformed_request_error("malformed status line");
+        throw malformed_request_error("malformed status line: http version");
     }
-    statusLine.httpVersion = HTTP_VERSION;
 
     if (safe_fgetc(stream) == '\r') {
         if (safe_fgetc(stream) == '\n') {
@@ -43,7 +42,7 @@ void http_request::read_status_line(FILE *stream) {
         }
     }
 
-    throw malformed_request_error("malformed status line");
+    throw malformed_request_error("malformed status line: line end");
 }
 
 void http_request::read_headers(FILE *stream) {
@@ -57,9 +56,17 @@ std::string response_status_line::to_string() {
 }
 
 http_response::http_response() {
-    statusLine.reasonPhrase = "OK";
-    statusLine.statusCode = 200;
     statusLine.httpVersion = HTTP_VERSION;
+    statusLine.statusCode = 200;
+    statusLine.reasonPhrase = "OK";
+}
+
+http_response::http_response(nonfatal_http_communication_exception const& e) {
+    statusLine.httpVersion = HTTP_VERSION;
+    statusLine.statusCode = e.statusCode;
+    statusLine.reasonPhrase = e.what();
+
+    // TODO content-length
 }
 
 void http_response::send(FILE *stream) {
@@ -67,5 +74,6 @@ void http_response::send(FILE *stream) {
     const char* statusLineBuffer = statusLineStr.c_str();
     fwrite(statusLineBuffer, 1, strlen(statusLineBuffer), stream);
     fwrite(CRLF, 1, strlen(CRLF), stream);
-    fflush(stream);
+
+    // TODO
 }

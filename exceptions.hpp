@@ -6,15 +6,15 @@
 
 class tcp_server_generic_exception : public std::exception {
     std::string message;
-    std::string custom_message;
+    std::string customMessage;
 
   public:
     tcp_server_generic_exception(){};
-    tcp_server_generic_exception(std::string msg) : custom_message(msg) {
+    tcp_server_generic_exception(std::string msg) : customMessage(msg) {
     }
 
     const char *what() const throw() {
-        return custom_message.size() ? custom_message.c_str() : message.c_str();
+        return customMessage.size() ? customMessage.c_str() : message.c_str();
     }
 };
 
@@ -22,7 +22,7 @@ class nonfatal_http_communication_exception : public tcp_server_generic_exceptio
     std::string message = "nonfatal exception";
 
   public:
-    const uint16_t status_code = 500;
+    const uint16_t statusCode = 500;
     using tcp_server_generic_exception::tcp_server_generic_exception;
 };
 
@@ -30,7 +30,7 @@ class io_function_error : public nonfatal_http_communication_exception {
     std::string message = "internal server error";
 
   public:
-    const uint16_t status_code = 500;
+    const uint16_t statusCode = 500;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
@@ -38,7 +38,7 @@ class malformed_request_error : public nonfatal_http_communication_exception {
     std::string message = "request was malformed";
 
   public:
-    const uint16_t status_code = 400;
+    const uint16_t statusCode = 400;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
@@ -46,7 +46,7 @@ class invalid_request_error : public nonfatal_http_communication_exception {
     std::string message = "request was invalid";
 
   public:
-    const uint16_t status_code = 400;
+    const uint16_t statusCode = 400;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
@@ -54,7 +54,7 @@ class not_supported_error : public nonfatal_http_communication_exception {
     std::string message = "request contains not supported elements";
 
   public:
-    const uint16_t status_code = 501;
+    const uint16_t statusCode = 501;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 

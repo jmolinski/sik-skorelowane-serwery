@@ -6,7 +6,6 @@
 struct request_status_line {
     std::string method;
     std::string requestTarget;
-    std::string httpVersion;
 };
 
 struct response_status_line {
@@ -34,7 +33,8 @@ class http_response {
     response_status_line statusLine;
 
   public:
-    explicit http_response();
+    http_response();
+    explicit http_response(nonfatal_http_communication_exception const& e);
     void send(FILE *stream);
 };
 

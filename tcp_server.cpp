@@ -5,21 +5,25 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <iostream>
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
 
-void server::run_request_response_loop(FILE *stream) {
+void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
     while (true) {
         try {
-            http_request request(stream);
+            http_request request(in_stream);
 
             http_response response;
-            response.send(stream);
-            break;
+            response.send(out_stream);
 
             // Resource(request.statusLine.requestTarget);
-        } catch (invalid_request_error const &e) {
-            fatal("an error occured, exceptions should be handled");
+        } catch (nonfatal_http_communication_exception const &e) {
+            http_response response(e);
+            response.send(out_stream);
+
+            // TODO
+            throw no_request_to_read_exception();
         }
     }
 }
@@ -34,15 +38,31 @@ void server::handle_connection(int sock) {
     // ewentualne kolejne żądanie tego samego klienta lub zakończenie połączenia przez
     // klienta.
 
-    FILE *f = fdopen(sock, "rb");
-    if (f == nullptr) {
+    int out_sock = dup(sock);
+    if (out_sock == -1) {
+        syserr("dup on connection socket failed");
+    }
+    FILE *fin = fdopen(sock, "r");
+    if (fin == nullptr) {
+        syserr("opening connection socket failed");
+    }
+    FILE *fout = fdopen(out_sock, "w");
+    if (fout == nullptr) {
         syserr("opening connection socket failed");
     }
 
     try {
-        run_request_response_loop(f);
+        run_request_response_loop(fin, fout);
     } catch (no_request_to_read_exception const &e) {
-        if (fclose(f) == EOF) {
+        // const char* a = "aaaaaaaaa 2137";
+        //int ret = write(sock, a, 14);
+
+        //std::cout << ret << '\n';
+
+        if (fclose(fin) == EOF) {
+            syserr("closing connection failed");
+        }
+        if (fclose(fout) == EOF) {
             syserr("closing connection failed");
         }
     }
@@ -77,10 +97,12 @@ void server::run() {
     // program powinien zakończyć swoje działanie z kodem błędu EXIT_FAILURE.
 
     while (true) {
+        std::cout << "waiting for conntection\n";
         int msgsock = accept(sock, nullptr, nullptr);
         if (msgsock == -1) {
             syserr("accept");
         }
+        std::cout << "connected\n";
 
         handle_connection(msgsock);
     }
