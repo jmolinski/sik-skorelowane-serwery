@@ -1,6 +1,8 @@
 #include "tcp_server.hpp"
 #include "err.hpp"
+#include "http.hpp"
 #include "input_parsing.hpp"
+#include "resource.hpp"
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -8,45 +10,36 @@
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
 
-http_request server::read_request(FILE *in_stream, FILE *out_stream) {
-    try {
-        return http_request(in_stream);
-    } catch (malformed_request_error const &e) {
-        http_response response(e);
-        response.set_close_connection_header();
-        response.send(out_stream);
-        throw no_request_to_read_exception();
-    } catch (nonfatal_http_communication_exception const &e) {
-        http_response response(e);
-        response.send(out_stream);
-
-        // TODO
-        throw no_request_to_read_exception();
-    }
-}
-
 void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
     while (true) {
-        http_request request = read_request(in_stream, out_stream);
-        // TODO connection: close header
+        http_request request;
+        try {
+            request = http_request(in_stream);
+        } catch (invalid_request_error const &e) {
+            http_response response(e);
+            response.set_close_connection_header();
+            response.send(out_stream);
+            throw no_request_to_read_exception();
+        } catch (nonfatal_http_communication_exception const &e) {
+            http_response response(e);
+            response.send(out_stream);
+            continue;
+        } catch (client_closed_connection_error const &e) {
+            throw no_request_to_read_exception();
+        }
 
-        http_response response;
-        response.send(out_stream);
-
-        // Resource(request.statusLine.requestTarget);
+        try {
+            resource optional_resource = resource(config, request.statusLine.requestTarget);
+            http_response response = http_response(optional_resource);
+            response.send(out_stream);
+        } catch (nonfatal_http_communication_exception const &e) {
+            http_response response(e);
+            response.send(out_stream);
+        }
     }
 }
 
 void server::handle_connection(int sock) {
-    // Serwer po ustanowieniu połączenia z klientem oczekuje na żądanie klienta.
-    // Serwer powinien zakończyć połączenie w przypadku przesłania przez klienta niepoprawnego
-    // żądania. W takim przypadku serwer powinien wysłać komunikat o błędzie, ze statusem 400,
-    // a następnie zakończyć połączenie.
-    //
-    // Jeśli żądanie klienta było jednak poprawne, to serwer powinien oczekiwać na
-    // ewentualne kolejne żądanie tego samego klienta lub zakończenie połączenia przez
-    // klienta.
-
     int out_sock = dup(sock);
     if (out_sock == -1) {
         syserr("dup on connection socket failed");
@@ -94,11 +87,6 @@ void server::run() {
     if (listen(sock, LISTEN_QUEUE_LENGTH) < 0) {
         syserr("listen");
     }
-
-    // Po uruchomieniu serwer powinien odnaleźć wskazany katalog z plikami i rozpocząć
-    // nasłuchiwanie na połączenia TCP od klientów na wskazanym porcie. Jeśli otwarcie
-    // katalogu, odczyt z katalogu, bądź otwarcie gniazda sieciowego nie powiodą się, to
-    // program powinien zakończyć swoje działanie z kodem błędu EXIT_FAILURE.
 
     while (true) {
         std::cout << "waiting for conntection\n";

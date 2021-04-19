@@ -1,2 +1,2 @@
-POST / HTTP/1.1
+POST /a HTTP/1.1
 

@@ -26,6 +26,14 @@ class nonfatal_http_communication_exception : public tcp_server_generic_exceptio
     using tcp_server_generic_exception::tcp_server_generic_exception;
 };
 
+class out_of_memory_error : public nonfatal_http_communication_exception {
+    std::string message = "out of memory error";
+
+  public:
+    const uint16_t statusCode = 500;
+    using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
+};
+
 class io_function_error : public nonfatal_http_communication_exception {
     std::string message = "internal server error";
 

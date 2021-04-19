@@ -2,6 +2,7 @@
 #define SIK_SKORELOWANE_SERWERY_HTTP_H
 
 #include "input_parsing.hpp"
+#include "resource.hpp"
 #include <map>
 #include <vector>
 
@@ -46,7 +47,9 @@ class http_response {
 
   public:
     http_response();
+    explicit http_response(resource r);
     explicit http_response(nonfatal_http_communication_exception const &e);
+
     void send(FILE *stream);
     void set_close_connection_header();
 };

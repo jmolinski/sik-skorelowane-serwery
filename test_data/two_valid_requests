@@ -1,5 +1,5 @@
-GET / HTTP/1.1
+GET /a HTTP/1.1
 
-HEAD / HTTP/1.1
+HEAD /a HTTP/1.1
 Server:aaa
 

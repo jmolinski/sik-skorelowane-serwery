@@ -20,6 +20,7 @@ add_executable(serwer
         cmd_args_parser.cpp
         input_parsing.cpp
         http.cpp
+        resource.cpp
         )
 target_link_libraries(serwer stdc++fs)
 
@@ -29,6 +30,7 @@ add_executable(test_server
         cmd_args_parser.cpp
         input_parsing.cpp
         http.cpp
+        resource.cpp
         )
 target_link_libraries(test_server stdc++fs)
 
@@ -36,6 +38,7 @@ add_executable(test_http
         test_http.cpp
         input_parsing.cpp
         http.cpp
+        resource.cpp
         )
 target_link_libraries(test_http stdc++fs)
 
@@ -63,4 +66,6 @@ add_test(missing_closing_crlf test_http 18)
 add_test(missing_closing_crlf_2 test_http 19)
 add_test(empty_string test_http 20)
 add_test(cut_header_eof test_http 21)
+add_test(target_not_starting_with_slash test_http 22)
+add_test(target_ending_with_slash test_http 23)
 

@@ -11,7 +11,7 @@ constexpr const char *HTTP_VERSION = "HTTP/1.1";
 constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
-const std::regex REQUEST_PATH_REGEX("[a-zA-Z0-9.-/]+");
+const std::regex REQUEST_PATH_REGEX("/[a-zA-Z0-9.-/]*[a-zA-Z0-9-]");
 const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
 
 static inline bool is_ignored_header(std::string const &s) {
@@ -23,8 +23,12 @@ http_request::http_request(FILE *stream) : close_connection(false) {
         throw no_request_to_read_exception();
     }
 
-    read_status_line(stream);
-    read_headers(stream);
+    try {
+        read_status_line(stream);
+        read_headers(stream);
+    } catch (std::bad_alloc &ex) {
+        throw out_of_memory_error();
+    }
 
     if (headers.headers.find("content-length") != headers.headers.end()) {
         if (headers.headers.find("content-length")->second != "0") {
@@ -132,6 +136,20 @@ http_response::http_response(nonfatal_http_communication_exception const &e) {
     headers.headers.insert({"Server", SERVER_NAME});
 }
 
+http_response::http_response(resource r) {
+    (void)r;
+    statusLine.httpVersion = HTTP_VERSION;
+    statusLine.statusCode = 200;
+    statusLine.reasonPhrase = "OK";
+}
+
+void http_response::set_close_connection_header() {
+    if (headers.headers.find("Connection") != headers.headers.end()) {
+        headers.headers.erase("Connection");
+    }
+    headers.headers.insert({"Connection", "close"});
+}
+
 void http_response::send(FILE *stream) {
     std::string statusLineStr = statusLine.to_string();
     const char *statusLineBuffer = statusLineStr.c_str();
@@ -156,5 +174,9 @@ void http_response::send(FILE *stream) {
         if (fwrite(data.data(), 1, data.size(), stream) != data.size()) {
             throw no_request_to_read_exception();
         }
+    }
+
+    if (fflush(stream) == EOF) {
+        throw no_request_to_read_exception();
     }
 }
