@@ -119,6 +119,26 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr2.statusLine.method == "HEAD");
             break;
         }
+        case 17: {
+            assert_raises<invalid_request_error>("invalid_header_name");
+            break;
+        }
+        case 18: {
+            assert_raises<client_closed_connection_error>("missing_closing_crlf");
+            break;
+        }
+        case 19: {
+            assert_raises<client_closed_connection_error>("missing_closing_crlf_2");
+            break;
+        }
+        case 20: {
+            assert_raises<client_closed_connection_error>("empty_string");
+            break;
+        }
+        case 21: {
+            assert_raises<client_closed_connection_error>("cut_header_eof");
+            break;
+        }
     }
 
     return 0;

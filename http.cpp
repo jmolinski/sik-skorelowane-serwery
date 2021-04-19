@@ -12,6 +12,7 @@ constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
 const std::regex REQUEST_PATH_REGEX("[a-zA-Z0-9.-/]+");
+const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
 
 static inline bool is_ignored_header(std::string const &s) {
     return s != "connection" && s != "content-length";
@@ -69,6 +70,10 @@ bool http_request::read_header(FILE *stream) {
 
     std::transform(fieldname.begin(), fieldname.end(), fieldname.begin(),
                    [](unsigned char c) { return std::tolower(c); });
+
+    if (!std::regex_match(fieldname, HEADER_NAME_REGEX)) {
+        throw invalid_request_error("header name contains illegal characters");
+    }
 
     if (!is_ignored_header(fieldname)) {
         if (headers.headers.find(fieldname) != headers.headers.end()) {
@@ -134,12 +139,22 @@ void http_response::send(FILE *stream) {
     std::string headersStr = headers.to_string();
     const char *headersBuffer = headersStr.c_str();
 
-    // TODO error handling
-    fwrite(statusLineBuffer, 1, strlen(statusLineBuffer), stream);
-    fwrite(headersBuffer, 1, strlen(headersBuffer), stream);
-    fwrite(CRLF, 1, strlen(CRLF), stream);
+    // If sending to client fails no_request_to_read_exception is thrown to force the server
+    // to close the connection without failing.
+    if (fwrite(statusLineBuffer, 1, strlen(statusLineBuffer), stream) !=
+        strlen(statusLineBuffer)) {
+        throw no_request_to_read_exception();
+    }
+    if (fwrite(headersBuffer, 1, strlen(headersBuffer), stream) != strlen(headersBuffer)) {
+        throw no_request_to_read_exception();
+    }
+    if (fwrite(CRLF, 1, strlen(CRLF), stream) != strlen(CRLF)) {
+        throw no_request_to_read_exception();
+    }
 
     if (data.size()) {
-        fwrite(data.data(), 1, data.size(), stream);
+        if (fwrite(data.data(), 1, data.size(), stream) != data.size()) {
+            throw no_request_to_read_exception();
+        }
     }
 }
