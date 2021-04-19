@@ -2,10 +2,10 @@
 #include "err.hpp"
 #include "http.hpp"
 #include "input_parsing.hpp"
+#include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <iostream>
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
 
@@ -13,6 +13,7 @@ void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
     while (true) {
         try {
             http_request request(in_stream);
+            // TODO connection: close header
 
             http_response response;
             response.send(out_stream);
@@ -54,11 +55,6 @@ void server::handle_connection(int sock) {
     try {
         run_request_response_loop(fin, fout);
     } catch (no_request_to_read_exception const &e) {
-        // const char* a = "aaaaaaaaa 2137";
-        //int ret = write(sock, a, 14);
-
-        //std::cout << ret << '\n';
-
         if (fclose(fin) == EOF) {
             syserr("closing connection failed");
         }
