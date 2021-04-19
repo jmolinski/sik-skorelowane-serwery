@@ -1,6 +1,8 @@
 #include "input_parsing.hpp"
 #include <sstream>
 
+constexpr uint16_t MAX_TOKEN_LENGTH = 8192;
+
 void safe_fread_bytes(FILE *f, char *buffer, size_t bytes) {
     size_t bytesRead = fread(buffer, sizeof(char), bytes, f);
     if (bytesRead != bytes) {
@@ -24,7 +26,7 @@ char safe_fgetc(FILE *f) {
 
 std::string readline_until_delim(FILE *f, char delim) {
     std::ostringstream os;
-
+    uint16_t len = 0;
     bool previousCharIsCr = false;
     do {
         char c = safe_fgetc(f);
@@ -32,6 +34,11 @@ std::string readline_until_delim(FILE *f, char delim) {
             return os.str();
         }
         os << c;
+        len++;
+        if (len > MAX_TOKEN_LENGTH) {
+            throw invalid_request_error("too token in status line");
+        }
+
         if (c == '\n' && previousCharIsCr) {
             throw malformed_request_error();
         }
@@ -42,9 +49,15 @@ std::string readline_until_delim(FILE *f, char delim) {
 char read_headerline_token(FILE *stream, std::stringstream &os, char first_char, char delim1,
                            char delim2) {
     char c = first_char;
+    uint16_t len = 0;
     bool previousCharIsCr = c == '\r';
     while (c != delim1 && c != delim2) {
         os << c;
+        len++;
+        if (len > MAX_TOKEN_LENGTH) {
+            throw invalid_request_error("too long header name or value");
+        }
+
         c = safe_fgetc(stream);
 
         if (c == '\n' && previousCharIsCr) {

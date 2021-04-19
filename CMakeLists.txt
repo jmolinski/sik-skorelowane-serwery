@@ -68,4 +68,6 @@ add_test(empty_string test_http 20)
 add_test(cut_header_eof test_http 21)
 add_test(target_not_starting_with_slash test_http 22)
 add_test(target_ending_with_slash test_http 23)
+add_test(too_long_resource_path test_http 24)
+add_test(too_long_header_value_path test_http 25)
 

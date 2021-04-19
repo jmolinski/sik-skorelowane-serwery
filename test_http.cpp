@@ -39,7 +39,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             File f("status_line_ok_no_headers");
             http_request hr(f.f);
             assert(hr.statusLine.method == "HEAD");
-            assert(hr.statusLine.requestTarget == "/");
+            assert(hr.statusLine.requestTarget == "/a");
             assert(!hr.close_connection);
             break;
         }
@@ -137,6 +137,22 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         }
         case 21: {
             assert_raises<client_closed_connection_error>("cut_header_eof");
+            break;
+        }
+        case 22: {
+            assert_raises<invalid_request_error>("target_not_starting_with_slash");
+            break;
+        }
+        case 23: {
+            assert_raises<invalid_request_error>("target_ending_with_slash");
+            break;
+        }
+        case 24: {
+            assert_raises<invalid_request_error>("too_long_resource_path");
+            break;
+        }
+        case 25: {
+            assert_raises<invalid_request_error>("too_long_header_value_path");
             break;
         }
     }
