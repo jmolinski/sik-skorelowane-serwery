@@ -34,20 +34,19 @@ class io_function_error : public nonfatal_http_communication_exception {
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
-class malformed_request_error : public nonfatal_http_communication_exception {
-    std::string message = "request was malformed";
-
-  public:
-    const uint16_t statusCode = 400;
-    using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
-};
-
 class invalid_request_error : public nonfatal_http_communication_exception {
     std::string message = "request was invalid";
 
   public:
     const uint16_t statusCode = 400;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
+};
+
+class malformed_request_error : public invalid_request_error {
+    std::string message = "request was malformed";
+
+  public:
+    using invalid_request_error::invalid_request_error;
 };
 
 class not_supported_error : public nonfatal_http_communication_exception {

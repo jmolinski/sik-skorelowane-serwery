@@ -2,8 +2,8 @@
 #include "exceptions.hpp"
 #include <algorithm>
 #include <cstring>
-#include <iostream>
 #include <map>
+#include <regex>
 #include <sstream>
 
 constexpr const char *CRLF = "\r\n";
@@ -11,11 +11,13 @@ constexpr const char *HTTP_VERSION = "HTTP/1.1";
 constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
+const std::regex REQUEST_PATH_REGEX("[a-zA-Z0-9.-/]+");
+
 static inline bool is_ignored_header(std::string const &s) {
-    return s != "content-type" && s != "connection" && s != "content-length" && s != "server";
+    return s != "connection" && s != "content-length";
 }
 
-http_request::http_request(FILE *stream) : has_invalid_headers(false), close_connection(false) {
+http_request::http_request(FILE *stream) : close_connection(false) {
     if (feof(stream)) {
         throw no_request_to_read_exception();
     }
@@ -24,16 +26,7 @@ http_request::http_request(FILE *stream) : has_invalid_headers(false), close_con
     read_headers(stream);
 
     if (headers.headers.find("content-length") != headers.headers.end()) {
-        auto it = headers.headers.find("content-length");
-        if (it->second != "0") {
-            try {
-                unsigned cnt = std::stoi(it->second);
-                for (unsigned i = 0; i < cnt; ++i) {
-                    safe_fgetc(stream);
-                }
-            } catch (...) {
-                throw malformed_request_error("can't parse content-length header");
-            }
+        if (headers.headers.find("content-length")->second != "0") {
             throw invalid_request_error("request content-length greater than 0");
         }
     }
@@ -41,24 +34,21 @@ http_request::http_request(FILE *stream) : has_invalid_headers(false), close_con
     if (statusLine.method != "GET" && statusLine.method != "HEAD") {
         throw not_supported_error("method not supported");
     }
-    if (has_invalid_headers) {
-        throw invalid_request_error("invalid headers");
-    }
 }
 
 void http_request::read_status_line(FILE *stream) {
     statusLine.method = readline_until_delim(stream, ' ');
     statusLine.requestTarget = readline_until_delim(stream, ' ');
 
+    if (!std::regex_match(statusLine.requestTarget, REQUEST_PATH_REGEX)) {
+        throw invalid_request_error("request-targer containts illegal characters");
+    }
+
     char httpVersionBuffer[HTTP_VERSION_SIZE + 1] = {0};
     safe_fread_bytes(stream, httpVersionBuffer, HTTP_VERSION_SIZE);
     if (strcmp(HTTP_VERSION, httpVersionBuffer) != 0) {
         throw malformed_request_error("malformed status line: http version");
     }
-
-    // TODO
-    std::cout << statusLine.method << ' ' << statusLine.requestTarget << ' ' << HTTP_VERSION
-              << '\n';
 
     if (safe_fgetc(stream) == '\r') {
         if (safe_fgetc(stream) == '\n') {
@@ -82,7 +72,7 @@ bool http_request::read_header(FILE *stream) {
 
     if (!is_ignored_header(fieldname)) {
         if (headers.headers.find(fieldname) != headers.headers.end()) {
-            has_invalid_headers = true;
+            throw invalid_request_error("contains duplicate headers");
         } else {
             headers.headers.insert({fieldname, fieldvalue});
         }
@@ -98,8 +88,11 @@ void http_request::read_headers(FILE *stream) {
     } while (should_continue);
 
     if (headers.headers.find("connection") != headers.headers.end()) {
-        if (headers.headers.find("connection")->second == "close") {
+        std::string fieldvalue = headers.headers.find("connection")->second;
+        if (fieldvalue == "close") {
             close_connection = true;
+        } else if (fieldvalue != "keep-alive") {
+            throw invalid_request_error("invalid connection header value");
         }
     }
 }

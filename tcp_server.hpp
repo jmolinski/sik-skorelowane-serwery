@@ -1,6 +1,7 @@
 #ifndef SIK_SKORELOWANE_SERWERY_TCP_SERVER_H
 #define SIK_SKORELOWANE_SERWERY_TCP_SERVER_H
 
+#include "http.hpp"
 #include <filesystem>
 
 struct basic_configuration {
@@ -19,6 +20,7 @@ class server {
   private:
     void handle_connection(int);
     void run_request_response_loop(FILE *in_stream, FILE *out_stream);
+    http_request read_request(FILE *in_stream, FILE *out_stream);
 
     basic_configuration config;
 };

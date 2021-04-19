@@ -32,4 +32,30 @@ add_executable(test_server
         )
 target_link_libraries(test_server stdc++fs)
 
+add_executable(test_http
+        test_http.cpp
+        input_parsing.cpp
+        http.cpp
+        )
+target_link_libraries(test_http stdc++fs)
+
 install(TARGETS DESTINATION .)
+
+enable_testing()
+add_test(status_line_ok_no_headers test_http 1)
+add_test(method_not_supported test_http 2)
+add_test(malformed_status_line_path_spaces_1 test_http 3)
+add_test(malformed_status_line_httpversion_space test_http 4)
+add_test(illegal_chars_in_request_target test_http 5)
+add_test(letter_casing_header test_http 6)
+add_test(header_no_spaces test_http 7)
+add_test(invalid_connection_header_value test_http 8)
+add_test(header_no_fieldname test_http 9)
+add_test(header_no_fielvalue test_http 10)
+add_test(duplicate_ignored_header test_http 11)
+add_test(duplicate_not_ignored_header test_http 12)
+add_test(content_length_0_header test_http 13)
+add_test(content_length_not_parsable_value test_http 14)
+add_test(content_length_greater_than_0 test_http 15)
+add_test(two_valid_requests test_http 16)
+

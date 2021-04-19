@@ -29,14 +29,14 @@ class http_request {
     void read_headers(FILE *stream);
     bool read_header(FILE *stream);
 
-    bool has_invalid_headers;
-    bool close_connection;
-
   public:
+    http_request() {
+    }
     explicit http_request(FILE *stream);
 
     request_status_line statusLine;
     http_headers headers;
+    bool close_connection;
 };
 
 class http_response {
@@ -48,6 +48,7 @@ class http_response {
     http_response();
     explicit http_response(nonfatal_http_communication_exception const &e);
     void send(FILE *stream);
+    void set_close_connection_header();
 };
 
 #endif // SIK_SKORELOWANE_SERWERY_HTTP_H

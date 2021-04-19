@@ -1,6 +1,5 @@
 #include "tcp_server.hpp"
 #include "err.hpp"
-#include "http.hpp"
 #include "input_parsing.hpp"
 #include <iostream>
 #include <netinet/in.h>
@@ -9,23 +8,32 @@
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
 
+http_request server::read_request(FILE *in_stream, FILE *out_stream) {
+    try {
+        return http_request(in_stream);
+    } catch (malformed_request_error const &e) {
+        http_response response(e);
+        response.set_close_connection_header();
+        response.send(out_stream);
+        throw no_request_to_read_exception();
+    } catch (nonfatal_http_communication_exception const &e) {
+        http_response response(e);
+        response.send(out_stream);
+
+        // TODO
+        throw no_request_to_read_exception();
+    }
+}
+
 void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
     while (true) {
-        try {
-            http_request request(in_stream);
-            // TODO connection: close header
+        http_request request = read_request(in_stream, out_stream);
+        // TODO connection: close header
 
-            http_response response;
-            response.send(out_stream);
+        http_response response;
+        response.send(out_stream);
 
-            // Resource(request.statusLine.requestTarget);
-        } catch (nonfatal_http_communication_exception const &e) {
-            http_response response(e);
-            response.send(out_stream);
-
-            // TODO
-            throw no_request_to_read_exception();
-        }
+        // Resource(request.statusLine.requestTarget);
     }
 }
 

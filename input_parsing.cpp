@@ -60,6 +60,9 @@ bool parse_headerline(FILE *stream, std::string &fieldname, std::string &fieldva
 
     // Handle potential \r\n denoting the end of headers section.
     char c = safe_fgetc(stream);
+    if (c == ':') {
+        throw malformed_request_error("header line without header name");
+    }
     if (c == '\r') {
         c = safe_fgetc(stream);
         if (c == '\n') {
@@ -73,6 +76,7 @@ bool parse_headerline(FILE *stream, std::string &fieldname, std::string &fieldva
 
     read_headerline_token(stream, os, c, ':', ':');
     fieldname = os.str();
+    os.str("");
     os.clear();
 
     do {
@@ -81,6 +85,9 @@ bool parse_headerline(FILE *stream, std::string &fieldname, std::string &fieldva
 
     c = read_headerline_token(stream, os, c, ' ', '\r');
     fieldvalue = os.str();
+    if (fieldvalue == "") {
+        throw malformed_request_error("header missing value");
+    }
 
     while (c == ' ') {
         c = safe_fgetc(stream);
