@@ -95,7 +95,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             break;
         }
         case 10: {
-            assert_raises<invalid_request_error>("header_no_fielvalue");
+            File f("header_no_fielvalue");
+            http_request hr(f.f);
+            assert(hr.headers.headers.size() == 0);
             break;
         }
         case 11: {
@@ -175,6 +177,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr.statusLine.requestTarget == "/");
             break;
         }
+        case 27: {
+            File f("header_value_with_spaces");
+            http_request hr(f.f);
+            assert(hr.statusLine.method == "GET");
+            assert(hr.statusLine.requestTarget == "/");
+            assert(hr.headers.headers.size() == 1);
+            assert(hr.close_connection);
+            break;
+        }
 
             // --------------------------------------------------
 
@@ -191,8 +202,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_response hr(out_of_memory_error{});
 
             std::string s = render_hr_response(hr);
-            std::string expected = "HTTP/1.1 500 out of memory error\r\nContent-Length: 0\r\nContent-Type: "
-                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            std::string expected =
+                "HTTP/1.1 500 out of memory error\r\nContent-Length: 0\r\nContent-Type: "
+                "application/octet-stream\r\nServer: sik-server\r\n\r\n";
             assert(s == expected);
             break;
         }

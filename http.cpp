@@ -18,6 +18,12 @@ static inline bool is_ignored_header(std::string const &s) {
     return s != "connection" && s != "content-length";
 }
 
+static inline std::string string_to_lower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return s;
+}
+
 http_request::http_request(FILE *stream) : close_connection(false) {
     if (feof(stream)) {
         // TODO co jeżeli wysłał jeden, czeka, nie zmknął i wysyła kolejny?
@@ -73,8 +79,7 @@ bool http_request::read_header(FILE *stream) {
         return false;
     }
 
-    std::transform(fieldname.begin(), fieldname.end(), fieldname.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    fieldname = string_to_lower(fieldname);
 
     if (!std::regex_match(fieldname, HEADER_NAME_REGEX)) {
         throw invalid_request_error("header name contains illegal characters");
@@ -98,7 +103,7 @@ void http_request::read_headers(FILE *stream) {
     } while (should_continue);
 
     if (headers.headers.find("connection") != headers.headers.end()) {
-        std::string fieldvalue = headers.headers.find("connection")->second;
+        std::string fieldvalue = string_to_lower(headers.headers.find("connection")->second);
         if (fieldvalue == "close") {
             close_connection = true;
         } else if (fieldvalue != "keep-alive") {
