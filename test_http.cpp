@@ -1,6 +1,7 @@
 #include "http.hpp"
 #include <cassert>
 #include <cstdio>
+#include <iostream>
 
 struct File {
     FILE *f;
@@ -28,6 +29,17 @@ void assert_raises(std::string const &fname) {
     } catch (...) {
         assert(false);
     }
+}
+
+std::string render_hr_response(http_response &hr, size_t bufferSize = 1000) {
+    char *tab = new char[bufferSize];
+    for (size_t i = 0; i < bufferSize; i++) {
+        tab[i] = 0;
+    }
+    FILE *file = fmemopen(tab, bufferSize, "w");
+    hr.send(file);
+
+    return std::string(tab);
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
@@ -144,7 +156,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             break;
         }
         case 23: {
-            assert_raises<invalid_request_error>("target_ending_with_slash");
+            File f("target_ending_with_slash");
+            http_request hr(f.f);
             break;
         }
         case 24: {
@@ -154,6 +167,54 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         case 25: {
             assert_raises<invalid_request_error>("too_long_header_value_path");
             break;
+        }
+        case 26: {
+            File f("request_path_slash_only");
+            http_request hr(f.f);
+            assert(hr.statusLine.method == "HEAD");
+            assert(hr.statusLine.requestTarget == "/");
+            break;
+        }
+
+            // --------------------------------------------------
+
+        case 30: {
+            http_response hr(malformed_request_error("test"));
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 400 test\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            assert(s == expected);
+            break;
+        }
+        case 31: {
+            http_response hr(out_of_memory_error{});
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 500 out of memory error\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            assert(s == expected);
+            break;
+        }
+        case 32: {
+            http_response hr(not_supported_error("aaa"));
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 501 aaa\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            assert(s == expected);
+            break;
+        }
+        case 33: {
+            FILE *file = fmemopen(nullptr, 0, "w");
+            http_response hr(not_supported_error("aaa"));
+
+            try {
+                hr.send(file);
+            } catch (no_request_to_read_exception &e) {
+                break;
+            }
+            assert(false);
         }
     }
 

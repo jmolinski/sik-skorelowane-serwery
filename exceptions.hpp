@@ -5,8 +5,9 @@
 #include <string>
 
 class tcp_server_generic_exception : public std::exception {
-    std::string message;
     std::string customMessage;
+
+    virtual const char *get_default_message() const = 0;
 
   public:
     tcp_server_generic_exception(){};
@@ -14,54 +15,70 @@ class tcp_server_generic_exception : public std::exception {
     }
 
     const char *what() const throw() {
-        return customMessage.size() ? customMessage.c_str() : message.c_str();
+        return customMessage.size() ? customMessage.c_str() : get_default_message();
     }
 };
 
 class nonfatal_http_communication_exception : public tcp_server_generic_exception {
-    std::string message = "nonfatal exception";
+    const char *get_default_message() const {
+        return "nonfatal exception";
+    }
 
   public:
-    const uint16_t statusCode = 500;
+    virtual uint16_t get_status_code() const {
+        return 500;
+    }
     using tcp_server_generic_exception::tcp_server_generic_exception;
 };
 
 class out_of_memory_error : public nonfatal_http_communication_exception {
-    std::string message = "out of memory error";
+    const char *get_default_message() const {
+        return "out of memory error";
+    }
 
   public:
-    const uint16_t statusCode = 500;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
 class io_function_error : public nonfatal_http_communication_exception {
-    std::string message = "internal server error";
+    const char *get_default_message() const {
+        return "internal server error";
+    }
 
   public:
-    const uint16_t statusCode = 500;
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
 class invalid_request_error : public nonfatal_http_communication_exception {
-    std::string message = "request was invalid";
+    const char *get_default_message() const {
+        return "request was invalid";
+    }
 
   public:
-    const uint16_t statusCode = 400;
+    uint16_t get_status_code() const {
+        return 400;
+    }
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
 class malformed_request_error : public invalid_request_error {
-    std::string message = "request was malformed";
+    const char *get_default_message() const {
+        return "request was malformed";
+    }
 
   public:
     using invalid_request_error::invalid_request_error;
 };
 
 class not_supported_error : public nonfatal_http_communication_exception {
-    std::string message = "request contains not supported elements";
+    const char *get_default_message() const {
+        return "request contains not supported elements";
+    }
 
   public:
-    const uint16_t statusCode = 501;
+    uint16_t get_status_code() const {
+        return 501;
+    }
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 

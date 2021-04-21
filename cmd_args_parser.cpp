@@ -7,6 +7,7 @@
 namespace fs = std::filesystem;
 
 constexpr unsigned DEFAULT_PORT = 8080;
+constexpr int MINIMAL_VALID_PORT = 1024;
 
 basic_configuration parse_commandline_arguments(int argc, char *argv[]) {
     // serwer <nazwa-katalogu-z-plikami> <plik-z-serwerami-skorelowanymi> [<numer-portu-serwera>]
@@ -51,7 +52,7 @@ basic_configuration parse_commandline_arguments(int argc, char *argv[]) {
     if (argc == 4) {
         try {
             int int_arg = std::stoi(argv[3]);
-            if (int_arg < 0 || int_arg > UINT16_MAX) {
+            if (int_arg < MINIMAL_VALID_PORT || int_arg > UINT16_MAX) {
                 throw std::out_of_range("");
             }
             port = static_cast<uint16_t>(int_arg);

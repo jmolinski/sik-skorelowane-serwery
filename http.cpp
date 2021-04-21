@@ -11,7 +11,7 @@ constexpr const char *HTTP_VERSION = "HTTP/1.1";
 constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
-const std::regex REQUEST_PATH_REGEX("/[a-zA-Z0-9.-/]*[a-zA-Z0-9-]");
+const std::regex REQUEST_PATH_REGEX("/[a-zA-Z0-9.-/]*");
 const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
 
 static inline bool is_ignored_header(std::string const &s) {
@@ -20,6 +20,7 @@ static inline bool is_ignored_header(std::string const &s) {
 
 http_request::http_request(FILE *stream) : close_connection(false) {
     if (feof(stream)) {
+        // TODO co jeżeli wysłał jeden, czeka, nie zmknął i wysyła kolejny?
         throw no_request_to_read_exception();
     }
 
@@ -120,15 +121,9 @@ std::string http_headers::to_string() {
     return os.str();
 }
 
-http_response::http_response() {
-    statusLine.httpVersion = HTTP_VERSION;
-    statusLine.statusCode = 200;
-    statusLine.reasonPhrase = "OK";
-}
-
 http_response::http_response(nonfatal_http_communication_exception const &e) {
     statusLine.httpVersion = HTTP_VERSION;
-    statusLine.statusCode = e.statusCode;
+    statusLine.statusCode = e.get_status_code();
     statusLine.reasonPhrase = e.what();
 
     headers.headers.insert({"Content-Length", "0"});
@@ -136,11 +131,20 @@ http_response::http_response(nonfatal_http_communication_exception const &e) {
     headers.headers.insert({"Server", SERVER_NAME});
 }
 
-http_response::http_response(resource r) {
+http_response::http_response(resource r, std::string const &method) {
+    // TODO zwracanie na podstawie wczytanego resource
+    // resouce potencjalnie trzyma informacje o tym, że plik znajduje sie na innym serwerze
+
     (void)r;
     statusLine.httpVersion = HTTP_VERSION;
     statusLine.statusCode = 200;
     statusLine.reasonPhrase = "OK";
+
+    skip_sending_message_body = method == "HEAD";
+
+    headers.headers.insert({"Content-Length", "0"}); // TODO
+    headers.headers.insert({"Content-Type", "application/octet-stream"});
+    headers.headers.insert({"Server", SERVER_NAME});
 }
 
 void http_response::set_close_connection_header() {
@@ -170,7 +174,7 @@ void http_response::send(FILE *stream) {
         throw no_request_to_read_exception();
     }
 
-    if (data.size()) {
+    if (!skip_sending_message_body && data.size()) {
         if (fwrite(data.data(), 1, data.size(), stream) != data.size()) {
             throw no_request_to_read_exception();
         }

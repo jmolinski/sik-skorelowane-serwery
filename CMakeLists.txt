@@ -1,15 +1,15 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required(VERSION 3.1)
 project(sik_skorelowane_serwery)
 
 set(CMAKE_CXX_FLAGS "-g -Wall -Wextra -Werror -Wpedantic")
 set(CMAKE_CXX_STANDARD 17)
 
 # http://stackoverflow.com/questions/10555706/
-macro (add_executable _name)
+macro(add_executable _name)
     _add_executable(${ARGV})
     if (TARGET ${_name})
         target_link_libraries(${_name} err)
-    endif()
+    endif ()
 endmacro()
 
 add_library(err err.cpp)
@@ -70,4 +70,9 @@ add_test(target_not_starting_with_slash test_http 22)
 add_test(target_ending_with_slash test_http 23)
 add_test(too_long_resource_path test_http 24)
 add_test(too_long_header_value_path test_http 25)
+add_test(request_path_slash_only test_http 26)
 
+add_test(response_malformed test_http 30)
+add_test(response_out_of_mem test_http 31)
+add_test(response_method_not_supported test_http 32)
+add_test(response_error_closed_connection test_http 33)

@@ -30,7 +30,7 @@ void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
 
         try {
             resource optional_resource = resource(config, request.statusLine.requestTarget);
-            http_response response = http_response(optional_resource);
+            http_response response = http_response(optional_resource, request.statusLine.method);
             response.send(out_stream);
         } catch (nonfatal_http_communication_exception const &e) {
             http_response response(e);
@@ -96,10 +96,13 @@ void server::run() {
         }
         std::cout << "connected\n";
 
-        handle_connection(msgsock);
-    }
-
-    if (close(sock) == -1) {
-        syserr("close");
+        try {
+            handle_connection(msgsock);
+        } catch (...) {
+            if (close(sock) == -1) {
+                syserr("close");
+            }
+            fatal("unhandled exception");
+        }
     }
 }

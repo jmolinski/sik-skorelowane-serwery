@@ -44,10 +44,10 @@ class http_response {
     response_status_line statusLine;
     http_headers headers;
     std::vector<char> data;
+    bool skip_sending_message_body;
 
   public:
-    http_response();
-    explicit http_response(resource r);
+    http_response(resource r, std::string const &method);
     explicit http_response(nonfatal_http_communication_exception const &e);
 
     void send(FILE *stream);
