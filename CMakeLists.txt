@@ -72,6 +72,7 @@ add_test(too_long_resource_path test_http 24)
 add_test(too_long_header_value_path test_http 25)
 add_test(request_path_slash_only test_http 26)
 add_test(header_value_with_spaces test_http 27)
+add_test(request_path_characters_regex test_http 28)
 
 add_test(response_malformed test_http 30)
 add_test(response_out_of_mem test_http 31)

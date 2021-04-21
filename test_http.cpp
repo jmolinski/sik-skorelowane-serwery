@@ -186,6 +186,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr.close_connection);
             break;
         }
+        case 28: {
+            File f("request_path_characters_regex");
+            http_request hr(f.f);
+            assert(hr.statusLine.requestTarget == "/.-aAzZ09/-");
+            break;
+        }
 
             // --------------------------------------------------
 

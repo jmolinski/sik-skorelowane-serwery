@@ -11,7 +11,7 @@ constexpr const char *HTTP_VERSION = "HTTP/1.1";
 constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
-const std::regex REQUEST_PATH_REGEX("/[a-zA-Z0-9.-/]*");
+const std::regex REQUEST_PATH_REGEX(R"r(\/[a-zA-Z0-9.\-\/]*)r");
 const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
 
 static inline bool is_ignored_header(std::string const &s) {
@@ -147,8 +147,8 @@ http_response::http_response(resource r, std::string const &method) {
 
     skip_sending_message_body = method == "HEAD";
 
-    headers.headers.insert({"Content-Length", "0"}); // TODO
-    headers.headers.insert({"Content-Type", "application/octet-stream"});
+    headers.headers.insert({"Content-Length", "0"});        // TODO
+    headers.headers.insert({"Content-Type", "text/plain"}); // "application/octet-stream"
     headers.headers.insert({"Server", SERVER_NAME});
 }
 
