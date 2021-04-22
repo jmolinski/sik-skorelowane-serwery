@@ -39,6 +39,7 @@ add_executable(test_http
         input_parsing.cpp
         http.cpp
         resource.cpp
+        filesystem_interactions.cpp
         )
 target_link_libraries(test_http stdc++fs)
 
@@ -77,3 +78,7 @@ add_test(response_malformed test_http 30)
 add_test(response_out_of_mem test_http 31)
 add_test(response_method_not_supported test_http 32)
 add_test(response_error_closed_connection test_http 33)
+add_test(response_not_found test_http 34)
+add_test(response_found test_http 35)
+add_test(response_local_get test_http 36)
+add_test(response_local_head test_http 37)

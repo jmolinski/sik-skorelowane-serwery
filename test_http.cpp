@@ -1,3 +1,4 @@
+#include "filesystem_interactions.hpp"
 #include "http.hpp"
 #include <cassert>
 #include <cstdio>
@@ -19,6 +20,51 @@ struct File {
     }
 };
 
+class fake_fs_not_exists : public abstract_server_resource_fs_resolver {
+  public:
+    FILE *get_file_handle(std::filesystem::path dir, std::string fname,
+                          size_t &fsize) const override {
+        (void)dir;
+        (void)fname;
+        fsize = 0;
+        return nullptr;
+    }
+};
+
+class fake_resolver_ret_handle : public abstract_server_resource_fs_resolver {
+    char *tab;
+    size_t data_size;
+
+  public:
+    fake_resolver_ret_handle(std::string data) {
+        data_size = data.size();
+        tab = new char[data.size() + 3];
+        for (size_t i = 0; i < data.size() + 3; i++) {
+            tab[i] = i < data.size() ? data[i] : 0;
+        }
+    }
+
+    ~fake_resolver_ret_handle() {
+        delete[] tab;
+    }
+
+    FILE *get_file_handle(std::filesystem::path dir, std::string fname,
+                          size_t &fsize) const override {
+        (void)dir;
+        (void)fname;
+        fsize = data_size;
+        return fmemopen(tab, data_size, "r");
+    }
+};
+
+basic_configuration empty_basic_config() {
+    return basic_configuration{"", {}, 2137};
+}
+
+basic_configuration basic_config_res(std::map<std::string, std::string> resources) {
+    return basic_configuration{"", resources, 2137};
+}
+
 template <typename T>
 void assert_raises(std::string const &fname) {
     File f = (fname);
@@ -39,7 +85,9 @@ std::string render_hr_response(http_response &hr, size_t bufferSize = 1000) {
     FILE *file = fmemopen(tab, bufferSize, "w");
     hr.send(file);
 
-    return std::string(tab);
+    std::string s = std::string(tab);
+    delete[] tab;
+    return s;
 }
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
@@ -231,6 +279,60 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
                 break;
             }
             assert(false);
+        }
+        case 34: {
+            auto resolver = fake_fs_not_exists();
+            resource res(resolver, empty_basic_config(), "/resource");
+            http_response hr(res, "HEAD");
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 404 Not found\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+
+            assert(s == expected);
+            break;
+        }
+        case 35: {
+            auto resolver = fake_fs_not_exists();
+            resource res(resolver, basic_config_res({{"/resource", "test_location"}}),
+                         "/resource");
+            http_response hr(res, "HEAD");
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 302 Found\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nLocation: "
+                                   "test_location\r\nServer: sik-server\r\n\r\n";
+
+            assert(s == expected);
+            break;
+        }
+        case 36: {
+            auto resolver = fake_resolver_ret_handle("some data");
+            resource res(resolver, empty_basic_config(), "/resource");
+            http_response hr(res, "GET");
+
+            std::string s = render_hr_response(hr);
+            std::string expected =
+                "HTTP/1.1 200 OK\r\nContent-Length: 9\r\nContent-Type: "
+                "application/octet-stream\r\nServer: sik-server\r\n\r\nsome data";
+
+            std::cout << s << '\n';
+            std::cout.flush();
+
+            assert(s == expected);
+            break;
+        }
+        case 37: {
+            auto resolver = fake_resolver_ret_handle("some data");
+            resource res(resolver, empty_basic_config(), "/resource");
+            http_response hr(res, "HEAD");
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 200 OK\r\nContent-Length: 9\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+
+            assert(s == expected);
+            break;
         }
     }
 
