@@ -82,6 +82,18 @@ class not_supported_error : public nonfatal_http_communication_exception {
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
+class does_not_exist_error : public nonfatal_http_communication_exception {
+    const char *get_default_message() const {
+        return "resource does not exist";
+    }
+
+  public:
+    uint16_t get_status_code() const {
+        return 404;
+    }
+    using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
+};
+
 class client_closed_connection_error : public std::exception {};
 class no_request_to_read_exception : public std::exception {};
 

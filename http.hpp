@@ -43,12 +43,14 @@ class http_request {
 class http_response {
     response_status_line statusLine;
     http_headers headers;
-    std::vector<char> data;
     bool skip_sending_message_body;
+    FILE *fileHandle;
+    size_t fileSize;
 
   public:
-    http_response(resource r, std::string const &method);
+    http_response(resource &r, std::string const &method);
     explicit http_response(nonfatal_http_communication_exception const &e);
+    ~http_response();
 
     void send(FILE *stream);
     void set_close_connection_header();

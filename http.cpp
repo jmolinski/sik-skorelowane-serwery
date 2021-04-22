@@ -14,6 +14,8 @@ constexpr const char *SERVER_NAME = "sik-server";
 const std::regex REQUEST_PATH_REGEX(R"r(\/[a-zA-Z0-9.\-\/]*)r");
 const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
 
+constexpr size_t BUFFER_SIZE = 2048;
+
 static inline bool is_ignored_header(std::string const &s) {
     return s != "connection" && s != "content-length";
 }
@@ -124,7 +126,8 @@ std::string http_headers::to_string() {
     return os.str();
 }
 
-http_response::http_response(nonfatal_http_communication_exception const &e) {
+http_response::http_response(nonfatal_http_communication_exception const &e)
+    : skip_sending_message_body(true), fileHandle(nullptr) {
     statusLine.httpVersion = HTTP_VERSION;
     statusLine.statusCode = e.get_status_code();
     statusLine.reasonPhrase = e.what();
@@ -139,20 +142,41 @@ http_response::http_response(nonfatal_http_communication_exception const &e) {
     }
 }
 
-http_response::http_response(resource r, std::string const &method) {
-    // TODO zwracanie na podstawie wczytanego resource
-    // resouce potencjalnie trzyma informacje o tym, że plik znajduje sie na innym serwerze
-
-    (void)r;
+http_response::http_response(resource &r, std::string const &method)
+    : skip_sending_message_body(true), fileHandle(nullptr) {
     statusLine.httpVersion = HTTP_VERSION;
-    statusLine.statusCode = 200;
-    statusLine.reasonPhrase = "OK";
 
-    skip_sending_message_body = method == "HEAD";
+    if (r.isLocalFile) {
+        statusLine.statusCode = 200;
+        statusLine.reasonPhrase = "OK";
+        headers.headers.insert({"Content-Length", std::to_string(r.filesize)});
+        skip_sending_message_body = method == "HEAD";
 
-    headers.headers.insert({"Content-Length", "0"});        // TODO
-    headers.headers.insert({"Content-Type", "text/plain"}); // "application/octet-stream"
+        fileSize = r.filesize;
+        fileHandle = r.fileHandle;
+        r.fileHandle = nullptr;
+        if (fileSize == 0) {
+            skip_sending_message_body = true;
+        }
+    } else if (r.isRemoteFile) {
+        statusLine.statusCode = 302;
+        statusLine.reasonPhrase = "Found";
+        headers.headers.insert({"Content-Length", "0"});
+        headers.headers.insert({"Location", r.remoteLocation});
+    } else {
+        statusLine.statusCode = 404;
+        statusLine.reasonPhrase = "Not found";
+        headers.headers.insert({"Content-Length", "0"});
+    }
+
+    headers.headers.insert({"Content-Type", "application/octet-stream"});
     headers.headers.insert({"Server", SERVER_NAME});
+}
+
+http_response::~http_response() {
+    if (fileHandle != nullptr) {
+        fclose(fileHandle);
+    }
 }
 
 void http_response::set_close_connection_header() {
@@ -182,9 +206,17 @@ void http_response::send(FILE *stream) {
         throw no_request_to_read_exception();
     }
 
-    if (!skip_sending_message_body && data.size()) {
-        if (fwrite(data.data(), 1, data.size(), stream) != data.size()) {
-            throw no_request_to_read_exception();
+    if (!skip_sending_message_body) {
+        char buffer[BUFFER_SIZE];
+        size_t toWrite = fileSize;
+
+        while (toWrite > 0) {
+            size_t bytesToRead = std::min(toWrite, BUFFER_SIZE);
+            safe_fread_bytes(fileHandle, buffer, bytesToRead);
+            toWrite -= bytesToRead;
+            if (fwrite(buffer, 1, bytesToRead, stream) != bytesToRead) {
+                throw no_request_to_read_exception();
+            }
         }
     }
 

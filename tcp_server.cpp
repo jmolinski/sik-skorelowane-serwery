@@ -30,9 +30,17 @@ void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
         }
 
         try {
-            resource optional_resource = resource(config, request.statusLine.requestTarget);
+            server_resource_fs_resolver resolver;
+            resource optional_resource =
+                resource(resolver, config, request.statusLine.requestTarget);
             http_response response = http_response(optional_resource, request.statusLine.method);
+            if (request.close_connection) {
+                response.set_close_connection_header();
+            }
             response.send(out_stream);
+            if (request.close_connection) {
+                throw no_request_to_read_exception();
+            }
         } catch (nonfatal_http_communication_exception const &e) {
             http_response response(e);
             response.send(out_stream);

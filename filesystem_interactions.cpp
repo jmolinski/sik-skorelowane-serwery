@@ -14,7 +14,6 @@ constexpr int MINIMAL_VALID_PORT = 1024;
 std::map<std::string, std::string> get_correlated_resources(std::string const &fname) {
     std::map<std::string, std::string> resources;
 
-    // TODO errors
     std::ifstream myfile(fname);
     std::string resource, server, port;
     while (myfile >> resource >> server >> port) {
