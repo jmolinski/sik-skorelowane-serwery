@@ -86,10 +86,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr.close_connection);
             break;
         }
-        case 8: {
-            assert_raises<invalid_request_error>("invalid_connection_header_value");
-            break;
-        }
         case 9: {
             assert_raises<invalid_request_error>("header_no_fieldname");
             break;
@@ -199,8 +195,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_response hr(malformed_request_error("test"));
 
             std::string s = render_hr_response(hr);
-            std::string expected = "HTTP/1.1 400 test\r\nContent-Length: 0\r\nContent-Type: "
-                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            std::string expected =
+                "HTTP/1.1 400 test\r\nConnection: close\r\nContent-Length: 0\r\nContent-Type: "
+                "application/octet-stream\r\nServer: sik-server\r\n\r\n";
             assert(s == expected);
             break;
         }
@@ -208,9 +205,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_response hr(out_of_memory_error{});
 
             std::string s = render_hr_response(hr);
-            std::string expected =
-                "HTTP/1.1 500 out of memory error\r\nContent-Length: 0\r\nContent-Type: "
-                "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            std::string expected = "HTTP/1.1 500 out of memory error\r\nConnection: "
+                                   "close\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
             assert(s == expected);
             break;
         }
@@ -218,8 +215,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_response hr(not_supported_error("aaa"));
 
             std::string s = render_hr_response(hr);
-            std::string expected = "HTTP/1.1 501 aaa\r\nContent-Length: 0\r\nContent-Type: "
-                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
+            std::string expected =
+                "HTTP/1.1 501 aaa\r\nConnection: close\r\nContent-Length: 0\r\nContent-Type: "
+                "application/octet-stream\r\nServer: sik-server\r\n\r\n";
             assert(s == expected);
             break;
         }

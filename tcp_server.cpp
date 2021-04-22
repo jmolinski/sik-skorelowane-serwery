@@ -1,5 +1,6 @@
 #include "tcp_server.hpp"
 #include "err.hpp"
+#include "filesystem_interactions.hpp"
 #include "http.hpp"
 #include "input_parsing.hpp"
 #include "resource.hpp"
@@ -87,17 +88,19 @@ void server::run() {
     if (listen(sock, LISTEN_QUEUE_LENGTH) < 0) {
         syserr("listen");
     }
+    std::cout << "Listening on port " << config.port << std::endl;
 
     while (true) {
-        std::cout << "waiting for conntection\n";
+        std::cout << "Waiting for connections..." << std::endl;
         int msgsock = accept(sock, nullptr, nullptr);
         if (msgsock == -1) {
             syserr("accept");
         }
-        std::cout << "connected\n";
+        std::cout << "Client connected." << std::endl;
 
         try {
             handle_connection(msgsock);
+            std::cout << "Connection closed." << std::endl;
         } catch (...) {
             if (close(sock) == -1) {
                 syserr("close");

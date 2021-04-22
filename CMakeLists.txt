@@ -17,7 +17,7 @@ add_library(err err.cpp)
 add_executable(serwer
         server.cpp
         tcp_server.cpp
-        cmd_args_parser.cpp
+        filesystem_interactions.cpp
         input_parsing.cpp
         http.cpp
         resource.cpp
@@ -27,7 +27,7 @@ target_link_libraries(serwer stdc++fs)
 add_executable(test_server
         test_server.cpp
         tcp_server.cpp
-        cmd_args_parser.cpp
+        filesystem_interactions.cpp
         input_parsing.cpp
         http.cpp
         resource.cpp
@@ -52,7 +52,6 @@ add_test(malformed_status_line_httpversion_space test_http 4)
 add_test(illegal_chars_in_request_target test_http 5)
 add_test(letter_casing_header test_http 6)
 add_test(header_no_spaces test_http 7)
-add_test(invalid_connection_header_value test_http 8)
 add_test(header_no_fieldname test_http 9)
 add_test(header_no_fielvalue test_http 10)
 add_test(duplicate_ignored_header test_http 11)

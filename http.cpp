@@ -106,8 +106,6 @@ void http_request::read_headers(FILE *stream) {
         std::string fieldvalue = string_to_lower(headers.headers.find("connection")->second);
         if (fieldvalue == "close") {
             close_connection = true;
-        } else if (fieldvalue != "keep-alive") {
-            throw invalid_request_error("invalid connection header value");
         }
     }
 }
@@ -134,6 +132,11 @@ http_response::http_response(nonfatal_http_communication_exception const &e) {
     headers.headers.insert({"Content-Length", "0"});
     headers.headers.insert({"Content-Type", "application/octet-stream"});
     headers.headers.insert({"Server", SERVER_NAME});
+
+    if (statusLine.statusCode == 400 || statusLine.statusCode == 500 ||
+        statusLine.statusCode == 501) {
+        set_close_connection_header();
+    }
 }
 
 http_response::http_response(resource r, std::string const &method) {
