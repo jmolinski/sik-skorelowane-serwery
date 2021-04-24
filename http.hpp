@@ -1,8 +1,8 @@
 #ifndef SIK_SKORELOWANE_SERWERY_HTTP_H
 #define SIK_SKORELOWANE_SERWERY_HTTP_H
 
+#include "filesystem_interactions.hpp"
 #include "input_parsing.hpp"
-#include "resource.hpp"
 #include <map>
 #include <vector>
 
@@ -38,6 +38,7 @@ class http_request {
     request_status_line statusLine;
     http_headers headers;
     bool close_connection;
+    bool targetDoesNotExist;
 };
 
 class http_response {

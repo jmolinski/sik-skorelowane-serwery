@@ -20,10 +20,9 @@ struct File {
     }
 };
 
-class fake_fs_not_exists : public abstract_server_resource_fs_resolver {
+class fake_fs_not_exists : public server_resource_fs_resolver {
   public:
-    FILE *get_file_handle(std::filesystem::path dir, std::string fname,
-                          size_t &fsize) const override {
+    FILE *get_file_handle(std::filesystem::path dir, std::string fname, size_t &fsize) const {
         (void)dir;
         (void)fname;
         fsize = 0;
@@ -31,7 +30,7 @@ class fake_fs_not_exists : public abstract_server_resource_fs_resolver {
     }
 };
 
-class fake_resolver_ret_handle : public abstract_server_resource_fs_resolver {
+class fake_resolver_ret_handle : public server_resource_fs_resolver {
     char *tab;
     size_t data_size;
 
@@ -48,8 +47,7 @@ class fake_resolver_ret_handle : public abstract_server_resource_fs_resolver {
         delete[] tab;
     }
 
-    FILE *get_file_handle(std::filesystem::path dir, std::string fname,
-                          size_t &fsize) const override {
+    FILE *get_file_handle(std::filesystem::path dir, std::string fname, size_t &fsize) const {
         (void)dir;
         (void)fname;
         fsize = data_size;
@@ -116,7 +114,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             break;
         }
         case 5: {
-            assert_raises<invalid_request_error>("illegal_chars_in_request_target");
+            assert_raises<does_not_exist_error>("illegal_chars_in_request_target");
             break;
         }
         case 6: {
@@ -236,6 +234,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr.statusLine.requestTarget == "/.-aAzZ09/-");
             break;
         }
+        case 29: {
+            assert_raises<invalid_request_error>("request_header_without_colon");
+            break;
+        }
 
             // --------------------------------------------------
 
@@ -331,6 +333,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             std::string expected = "HTTP/1.1 200 OK\r\nContent-Length: 9\r\nContent-Type: "
                                    "application/octet-stream\r\nServer: sik-server\r\n\r\n";
 
+            assert(s == expected);
+            break;
+        }
+        case 38: {
+            http_response hr(does_not_exist_error("aaa"));
+
+            std::string s = render_hr_response(hr);
+            std::string expected = "HTTP/1.1 404 aaa\r\nContent-Length: 0\r\nContent-Type: "
+                                   "application/octet-stream\r\nServer: sik-server\r\n\r\n";
             assert(s == expected);
             break;
         }

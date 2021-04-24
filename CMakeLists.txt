@@ -20,7 +20,6 @@ add_executable(serwer
         filesystem_interactions.cpp
         input_parsing.cpp
         http.cpp
-        resource.cpp
         )
 target_link_libraries(serwer stdc++fs)
 
@@ -30,7 +29,6 @@ add_executable(test_server
         filesystem_interactions.cpp
         input_parsing.cpp
         http.cpp
-        resource.cpp
         )
 target_link_libraries(test_server stdc++fs)
 
@@ -38,7 +36,6 @@ add_executable(test_http
         test_http.cpp
         input_parsing.cpp
         http.cpp
-        resource.cpp
         filesystem_interactions.cpp
         )
 target_link_libraries(test_http stdc++fs)
@@ -73,6 +70,7 @@ add_test(too_long_header_value_path test_http 25)
 add_test(request_path_slash_only test_http 26)
 add_test(header_value_with_spaces test_http 27)
 add_test(request_path_characters_regex test_http 28)
+add_test(request_header_without_colon test_http 29)
 
 add_test(response_malformed test_http 30)
 add_test(response_out_of_mem test_http 31)
@@ -82,3 +80,4 @@ add_test(response_not_found test_http 34)
 add_test(response_found test_http 35)
 add_test(response_local_get test_http 36)
 add_test(response_local_head test_http 37)
+add_test(request_does_not_exist_error test_http 38)

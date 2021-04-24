@@ -26,17 +26,6 @@ std::map<std::string, std::string> get_correlated_resources(std::string const &f
 }
 
 basic_configuration parse_commandline_arguments(int argc, char *argv[]) {
-    // serwer <nazwa-katalogu-z-plikami> <plik-z-serwerami-skorelowanymi> [<numer-portu-serwera>]
-
-    // Parametr z nazwą katalogu jest parametrem obowiązkowym i może być podany jako ścieżka
-    // bezwzględna lub względna. W przypadku ścieżki względnej serwer próbuje odnaleźć wskazany
-    // katalog w bieżącym katalogu roboczym.
-
-    // Parametr wskazujący na listę serwerów skorelowanych jest parametrem obowiązkowym
-
-    // Parametr z numerem portu serwera jest parametrem opcjonalnym i wskazuje numer portu
-    // na jakim serwer powinien nasłuchiwać połączeń od klientów. Domyślny numer portu to 8080.
-
     if (argc < 3 || argc > 4) {
         fatal("Usage: %s <files-directory> <correlated-servers-file> [port]", argv[0]);
     }
@@ -99,4 +88,27 @@ FILE *server_resource_fs_resolver::get_file_handle(std::filesystem::path dir, st
 
     fsize = std::filesystem::file_size(relpath);
     return fopen(relpath.c_str(), "r");
+}
+
+resource::resource(server_resource_fs_resolver &fileResolver,
+                   basic_configuration const &config, std::string const &relFilepath)
+    : isLocalFile(false), isRemoteFile(false) {
+    try {
+        fileHandle = fileResolver.get_file_handle(config.filesDirectory, relFilepath, filesize);
+    } catch (...) {
+        fileHandle = nullptr;
+    }
+
+    if (fileHandle != nullptr) {
+        isLocalFile = true;
+    } else if (config.correlatedResources.find(relFilepath) != config.correlatedResources.end()) {
+        isRemoteFile = true;
+        remoteLocation = config.correlatedResources.find(relFilepath)->second;
+    }
+}
+
+resource::~resource() {
+    if (isLocalFile && fileHandle != nullptr) {
+        fclose(fileHandle);
+    }
 }

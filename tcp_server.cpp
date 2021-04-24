@@ -3,7 +3,6 @@
 #include "filesystem_interactions.hpp"
 #include "http.hpp"
 #include "input_parsing.hpp"
-#include "resource.hpp"
 #include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -11,7 +10,7 @@
 
 constexpr int LISTEN_QUEUE_LENGTH = 10;
 
-void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
+void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) const {
     while (true) {
         http_request request;
         try {
@@ -48,34 +47,40 @@ void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) {
     }
 }
 
-void server::handle_connection(int sock) {
+void server::handle_connection(int sock) const {
     int out_sock = dup(sock);
     if (out_sock == -1) {
-        syserr("dup on connection socket failed");
+        fprintf(stderr, "Error when duping connection fd.\n");
+        return;
     }
     FILE *fin = fdopen(sock, "r");
     if (fin == nullptr) {
-        syserr("opening connection socket failed");
+        close(out_sock);
+        fprintf(stderr, "Error when opening connection fd as file.\n");
+        return;
     }
     FILE *fout = fdopen(out_sock, "w");
     if (fout == nullptr) {
-        syserr("opening connection socket failed");
+        close(out_sock);
+        fclose(fin);
+        fprintf(stderr, "Error when opening connection fd as file.\n");
+        return;
     }
 
     try {
         run_request_response_loop(fin, fout);
     } catch (no_request_to_read_exception const &e) {
         if (fclose(fin) == EOF) {
-            syserr("closing connection failed");
+            fprintf(stderr, "Error when closing in file.\n");
         }
         if (fclose(fout) == EOF) {
-            syserr("closing connection failed");
+            fprintf(stderr, "Error when closing out file.\n");
         }
     }
 }
 
-void server::run() {
-    int sock = socket(PF_INET, SOCK_STREAM, 0); // Creating IPv4 TCP socket.
+void server::run() const {
+    int sock = socket(PF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         syserr("socket");
     }
@@ -87,22 +92,21 @@ void server::run() {
         {0},
     };
 
-    // Bind the socket to a concrete address.
     if (bind(sock, (sockaddr *)&server_address, sizeof(server_address)) < 0) {
         syserr("bind");
     }
 
-    // Switch to listening (passive open).
     if (listen(sock, LISTEN_QUEUE_LENGTH) < 0) {
         syserr("listen");
     }
     std::cout << "Listening on port " << config.port << std::endl;
 
     while (true) {
-        std::cout << "Waiting for connections..." << std::endl;
+        std::cout << "\nWaiting for connections..." << std::endl;
         int msgsock = accept(sock, nullptr, nullptr);
         if (msgsock == -1) {
-            syserr("accept");
+            fprintf(stderr, "Error when accepting connection.\n");
+            continue;
         }
         std::cout << "Client connected." << std::endl;
 

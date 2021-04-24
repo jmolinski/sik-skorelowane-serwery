@@ -2,7 +2,7 @@ CXX=g++
 CPPFLAGS= -std=c++17 -O2
 LDFLAGS= -lstdc++fs
 
-SRCS=err.cpp filesystem_interactions.cpp http.cpp input_parsing.cpp resource.cpp tcp_server.cpp server.cpp
+SRCS=err.cpp filesystem_interactions.cpp http.cpp input_parsing.cpp tcp_server.cpp server.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 
 all: serwer

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <sstream>
 
-constexpr uint16_t MAX_TOKEN_LENGTH = 8192;
+constexpr uint16_t MAX_TOKEN_LENGTH = 8193;
 
 static inline std::string rstrip(const std::string &inpt) {
     if (inpt.empty()) {
@@ -21,7 +21,7 @@ void safe_fread_bytes(FILE *f, char *buffer, size_t bytes) {
         if (feof(f)) {
             throw client_closed_connection_error();
         }
-        throw io_function_error();
+        throw nonfatal_http_communication_exception("interval server error");
     }
 }
 
@@ -31,7 +31,7 @@ char safe_fgetc(FILE *f) {
         if (feof(f)) {
             throw client_closed_connection_error();
         }
-        throw io_function_error();
+        throw nonfatal_http_communication_exception("interval server error");
     }
     return static_cast<char>(c);
 }
@@ -74,6 +74,7 @@ char read_headerline_token(FILE *stream, std::stringstream &os, char first_char,
         if (c == '\n' && previousCharIsCr) {
             throw malformed_request_error("can't parse header line");
         }
+        previousCharIsCr = c == '\r';
     }
 
     return c;

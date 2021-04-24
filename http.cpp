@@ -2,7 +2,6 @@
 #include "exceptions.hpp"
 #include <algorithm>
 #include <cstring>
-#include <map>
 #include <regex>
 #include <sstream>
 
@@ -12,13 +11,9 @@ constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
 const std::regex REQUEST_PATH_REGEX(R"r(\/[a-zA-Z0-9.\-\/]*)r");
-const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9-_]+");
+const std::regex HEADER_NAME_REGEX("[a-zA-Z0-9_-]+");
 
-constexpr size_t BUFFER_SIZE = 2048;
-
-static inline bool is_ignored_header(std::string const &s) {
-    return s != "connection" && s != "content-length";
-}
+constexpr size_t BUFFER_SIZE = 4096;
 
 static inline std::string string_to_lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
@@ -26,12 +21,7 @@ static inline std::string string_to_lower(std::string s) {
     return s;
 }
 
-http_request::http_request(FILE *stream) : close_connection(false) {
-    if (feof(stream)) {
-        // TODO co jeżeli wysłał jeden, czeka, nie zmknął i wysyła kolejny?
-        throw no_request_to_read_exception();
-    }
-
+http_request::http_request(FILE *stream) : close_connection(false), targetDoesNotExist(false) {
     try {
         read_status_line(stream);
         read_headers(stream);
@@ -47,6 +37,8 @@ http_request::http_request(FILE *stream) : close_connection(false) {
 
     if (statusLine.method != "GET" && statusLine.method != "HEAD") {
         throw not_supported_error("method not supported");
+    } else if (targetDoesNotExist) {
+        throw does_not_exist_error("request-target containts illegal characters");
     }
 }
 
@@ -54,8 +46,11 @@ void http_request::read_status_line(FILE *stream) {
     statusLine.method = readline_until_delim(stream, ' ');
     statusLine.requestTarget = readline_until_delim(stream, ' ');
 
+    if (statusLine.requestTarget.empty() || statusLine.requestTarget[0] != '/') {
+        throw invalid_request_error("request-target must start with /");
+    }
     if (!std::regex_match(statusLine.requestTarget, REQUEST_PATH_REGEX)) {
-        throw invalid_request_error("request-targer containts illegal characters");
+        targetDoesNotExist = true;
     }
 
     char httpVersionBuffer[HTTP_VERSION_SIZE + 1] = {0};
@@ -87,12 +82,11 @@ bool http_request::read_header(FILE *stream) {
         throw invalid_request_error("header name contains illegal characters");
     }
 
-    if (!is_ignored_header(fieldname)) {
+    if (fieldname == "connection" || fieldname == "content-length") {
         if (headers.headers.find(fieldname) != headers.headers.end()) {
             throw invalid_request_error("contains duplicate headers");
-        } else {
-            headers.headers.insert({fieldname, fieldvalue});
         }
+        headers.headers.insert({fieldname, fieldvalue});
     }
 
     return true;
@@ -150,14 +144,10 @@ http_response::http_response(resource &r, std::string const &method)
         statusLine.statusCode = 200;
         statusLine.reasonPhrase = "OK";
         headers.headers.insert({"Content-Length", std::to_string(r.filesize)});
-        skip_sending_message_body = method == "HEAD";
-
         fileSize = r.filesize;
         fileHandle = r.fileHandle;
         r.fileHandle = nullptr;
-        if (fileSize == 0) {
-            skip_sending_message_body = true;
-        }
+        skip_sending_message_body = method == "HEAD" || fileSize == 0;
     } else if (r.isRemoteFile) {
         statusLine.statusCode = 302;
         statusLine.reasonPhrase = "Found";
@@ -180,9 +170,6 @@ http_response::~http_response() {
 }
 
 void http_response::set_close_connection_header() {
-    if (headers.headers.find("Connection") != headers.headers.end()) {
-        headers.headers.erase("Connection");
-    }
     headers.headers.insert({"Connection", "close"});
 }
 

@@ -1,18 +1,18 @@
 #ifndef SIK_SKORELOWANE_SERWERY_TCP_SERVER_H
 #define SIK_SKORELOWANE_SERWERY_TCP_SERVER_H
 
-#include "server_basic_config.hpp"
+#include "filesystem_interactions.hpp"
 
 class server {
   public:
     explicit server(basic_configuration _config) : config(std::move(_config)) {
     }
 
-    void run();
+    void run() const;
 
   private:
-    void handle_connection(int);
-    void run_request_response_loop(FILE *in_stream, FILE *out_stream);
+    void handle_connection(int) const;
+    void run_request_response_loop(FILE *in_stream, FILE *out_stream) const;
 
     basic_configuration config;
 };
