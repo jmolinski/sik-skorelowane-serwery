@@ -90,8 +90,8 @@ FILE *server_resource_fs_resolver::get_file_handle(std::filesystem::path dir, st
     return fopen(relpath.c_str(), "r");
 }
 
-resource::resource(server_resource_fs_resolver &fileResolver,
-                   basic_configuration const &config, std::string const &relFilepath)
+resource::resource(server_resource_fs_resolver &fileResolver, basic_configuration const &config,
+                   std::string const &relFilepath)
     : isLocalFile(false), isRemoteFile(false) {
     try {
         fileHandle = fileResolver.get_file_handle(config.filesDirectory, relFilepath, filesize);

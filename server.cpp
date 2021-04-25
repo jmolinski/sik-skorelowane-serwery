@@ -3,7 +3,7 @@
 #include <signal.h>
 
 int main(int argc, char *argv[]) {
-    signal(SIGPIPE, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN); // Ignore SIGPIPE.
 
     server(parse_commandline_arguments(argc, argv)).run();
 

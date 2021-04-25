@@ -7,7 +7,6 @@
 
 constexpr const char *CRLF = "\r\n";
 constexpr const char *HTTP_VERSION = "HTTP/1.1";
-constexpr uint8_t HTTP_VERSION_SIZE = 8;
 constexpr const char *SERVER_NAME = "sik-server";
 
 const std::regex REQUEST_PATH_REGEX(R"r(\/[a-zA-Z0-9.\-\/]*)r");
@@ -21,7 +20,7 @@ static inline std::string string_to_lower(std::string s) {
     return s;
 }
 
-http_request::http_request(FILE *stream) : close_connection(false), targetDoesNotExist(false) {
+http_request::http_request(FILE *stream) : closeConnection(false), targetDoesNotExist(false) {
     try {
         read_status_line(stream);
         read_headers(stream);
@@ -53,19 +52,15 @@ void http_request::read_status_line(FILE *stream) {
         targetDoesNotExist = true;
     }
 
-    char httpVersionBuffer[HTTP_VERSION_SIZE + 1] = {0};
-    safe_fread_bytes(stream, httpVersionBuffer, HTTP_VERSION_SIZE);
+    char httpVersionBuffer[20] = {0};
+    safe_fread_bytes(stream, httpVersionBuffer, strlen(HTTP_VERSION));
     if (strcmp(HTTP_VERSION, httpVersionBuffer) != 0) {
         throw malformed_request_error("malformed status line: http version");
     }
 
-    if (safe_fgetc(stream) == '\r') {
-        if (safe_fgetc(stream) == '\n') {
-            return;
-        }
+    if (safe_fgetc(stream) != '\r' || safe_fgetc(stream) != '\n') {
+        throw malformed_request_error("malformed status line: line end");
     }
-
-    throw malformed_request_error("malformed status line: line end");
 }
 
 bool http_request::read_header(FILE *stream) {
@@ -93,16 +88,11 @@ bool http_request::read_header(FILE *stream) {
 }
 
 void http_request::read_headers(FILE *stream) {
-    bool should_continue;
-    do {
-        should_continue = read_header(stream);
-    } while (should_continue);
+    while (read_header(stream)) {
+    }
 
     if (headers.headers.find("connection") != headers.headers.end()) {
-        std::string fieldvalue = string_to_lower(headers.headers.find("connection")->second);
-        if (fieldvalue == "close") {
-            close_connection = true;
-        }
+        closeConnection = string_to_lower(headers.headers.find("connection")->second) == "close";
     }
 }
 
@@ -121,7 +111,7 @@ std::string http_headers::to_string() {
 }
 
 http_response::http_response(nonfatal_http_communication_exception const &e)
-    : skip_sending_message_body(true), fileHandle(nullptr) {
+    : skipSendingMessageBody(true), fileHandle(nullptr) {
     statusLine.httpVersion = HTTP_VERSION;
     statusLine.statusCode = e.get_status_code();
     statusLine.reasonPhrase = e.what();
@@ -131,13 +121,13 @@ http_response::http_response(nonfatal_http_communication_exception const &e)
     headers.headers.insert({"Server", SERVER_NAME});
 
     if (statusLine.statusCode == 400 || statusLine.statusCode == 500 ||
-        statusLine.statusCode == 501) {
-        set_close_connection_header();
+        statusLine.statusCode == 501 || e.closeConnection) {
+        headers.headers.insert({"Connection", "close"});
     }
 }
 
-http_response::http_response(resource &r, std::string const &method)
-    : skip_sending_message_body(true), fileHandle(nullptr) {
+http_response::http_response(resource &r, std::string const &method, bool closeCommunication)
+    : skipSendingMessageBody(true), fileHandle(nullptr) {
     statusLine.httpVersion = HTTP_VERSION;
 
     if (r.isLocalFile) {
@@ -147,7 +137,7 @@ http_response::http_response(resource &r, std::string const &method)
         fileSize = r.filesize;
         fileHandle = r.fileHandle;
         r.fileHandle = nullptr;
-        skip_sending_message_body = method == "HEAD" || fileSize == 0;
+        skipSendingMessageBody = method == "HEAD" || fileSize == 0;
     } else if (r.isRemoteFile) {
         statusLine.statusCode = 302;
         statusLine.reasonPhrase = "Found";
@@ -161,6 +151,9 @@ http_response::http_response(resource &r, std::string const &method)
 
     headers.headers.insert({"Content-Type", "application/octet-stream"});
     headers.headers.insert({"Server", SERVER_NAME});
+    if (closeCommunication) {
+        headers.headers.insert({"Connection", "close"});
+    }
 }
 
 http_response::~http_response() {
@@ -169,31 +162,23 @@ http_response::~http_response() {
     }
 }
 
-void http_response::set_close_connection_header() {
-    headers.headers.insert({"Connection", "close"});
+static inline void safe_fwrite_bytes(const char *buffer, size_t count, FILE *f) {
+    if (fwrite(buffer, 1, count, f) != count) {
+        throw client_closed_connection_error();
+    }
 }
 
 void http_response::send(FILE *stream) {
     std::string statusLineStr = statusLine.to_string();
     const char *statusLineBuffer = statusLineStr.c_str();
-
     std::string headersStr = headers.to_string();
     const char *headersBuffer = headersStr.c_str();
 
-    // If sending to client fails no_request_to_read_exception is thrown to force the server
-    // to close the connection without failing.
-    if (fwrite(statusLineBuffer, 1, strlen(statusLineBuffer), stream) !=
-        strlen(statusLineBuffer)) {
-        throw no_request_to_read_exception();
-    }
-    if (fwrite(headersBuffer, 1, strlen(headersBuffer), stream) != strlen(headersBuffer)) {
-        throw no_request_to_read_exception();
-    }
-    if (fwrite(CRLF, 1, strlen(CRLF), stream) != strlen(CRLF)) {
-        throw no_request_to_read_exception();
-    }
+    safe_fwrite_bytes(statusLineBuffer, strlen(statusLineBuffer), stream);
+    safe_fwrite_bytes(headersBuffer, strlen(headersBuffer), stream);
+    safe_fwrite_bytes(CRLF, strlen(CRLF), stream);
 
-    if (!skip_sending_message_body) {
+    if (!skipSendingMessageBody) {
         char buffer[BUFFER_SIZE];
         size_t toWrite = fileSize;
 
@@ -201,13 +186,14 @@ void http_response::send(FILE *stream) {
             size_t bytesToRead = std::min(toWrite, BUFFER_SIZE);
             safe_fread_bytes(fileHandle, buffer, bytesToRead);
             toWrite -= bytesToRead;
-            if (fwrite(buffer, 1, bytesToRead, stream) != bytesToRead) {
-                throw no_request_to_read_exception();
-            }
+            safe_fwrite_bytes(buffer, bytesToRead, stream);
         }
     }
 
     if (fflush(stream) == EOF) {
+        throw client_closed_connection_error();
+    }
+    if (headers.headers.find("Connection") != headers.headers.end()) {
         throw no_request_to_read_exception();
     }
 }

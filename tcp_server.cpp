@@ -12,37 +12,18 @@ constexpr int LISTEN_QUEUE_LENGTH = 10;
 
 void server::run_request_response_loop(FILE *in_stream, FILE *out_stream) const {
     while (true) {
-        http_request request;
         try {
-            request = http_request(in_stream);
-        } catch (invalid_request_error const &e) {
-            http_response response(e);
-            response.set_close_connection_header();
-            response.send(out_stream);
-            throw no_request_to_read_exception();
-        } catch (nonfatal_http_communication_exception const &e) {
-            http_response response(e);
-            response.send(out_stream);
-            continue;
-        } catch (client_closed_connection_error const &e) {
-            throw no_request_to_read_exception();
-        }
-
-        try {
+            std::cout << "Waiting for a request...\n";
+            http_request request(in_stream);
             server_resource_fs_resolver resolver;
-            resource optional_resource =
-                resource(resolver, config, request.statusLine.requestTarget);
-            http_response response = http_response(optional_resource, request.statusLine.method);
-            if (request.close_connection) {
-                response.set_close_connection_header();
-            }
-            response.send(out_stream);
-            if (request.close_connection) {
-                throw no_request_to_read_exception();
-            }
+            std::cout << "Trying to find the requested resource\n";
+            resource optional_resource(resolver, config, request.statusLine.requestTarget);
+            std::cout << "Sending a response\n";
+            http_response(optional_resource, request.statusLine.method, request.closeConnection)
+                .send(out_stream);
         } catch (nonfatal_http_communication_exception const &e) {
-            http_response response(e);
-            response.send(out_stream);
+            std::cout << "A problem happened, sending a reponse\n";
+            http_response(e).send(out_stream);
         }
     }
 }

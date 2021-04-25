@@ -81,7 +81,10 @@ std::string render_hr_response(http_response &hr, size_t bufferSize = 1000) {
         tab[i] = 0;
     }
     FILE *file = fmemopen(tab, bufferSize, "w");
-    hr.send(file);
+    try {
+        hr.send(file);
+    } catch (no_request_to_read_exception &e) {
+    }
 
     std::string s = std::string(tab);
     delete[] tab;
@@ -98,7 +101,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_request hr(f.f);
             assert(hr.statusLine.method == "HEAD");
             assert(hr.statusLine.requestTarget == "/a");
-            assert(!hr.close_connection);
+            assert(!hr.closeConnection);
             break;
         }
         case 2: {
@@ -122,14 +125,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             http_request hr(f.f);
             assert(hr.headers.headers.size() == 1);
             assert(hr.headers.headers.find("connection")->second == "close");
-            assert(hr.close_connection);
+            assert(hr.closeConnection);
             break;
         }
         case 7: {
             File f("header_no_spaces");
             http_request hr(f.f);
             assert(hr.headers.headers.find("connection")->second == "close");
-            assert(hr.close_connection);
+            assert(hr.closeConnection);
             break;
         }
         case 9: {
@@ -225,7 +228,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
             assert(hr.statusLine.method == "GET");
             assert(hr.statusLine.requestTarget == "/");
             assert(hr.headers.headers.size() == 1);
-            assert(hr.close_connection);
+            assert(hr.closeConnection);
             break;
         }
         case 28: {

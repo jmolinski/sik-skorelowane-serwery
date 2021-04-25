@@ -21,7 +21,6 @@ struct response_status_line {
 
 struct http_headers {
     std::map<std::string, std::string> headers;
-
     std::string to_string();
 };
 
@@ -37,24 +36,23 @@ class http_request {
 
     request_status_line statusLine;
     http_headers headers;
-    bool close_connection;
+    bool closeConnection;
     bool targetDoesNotExist;
 };
 
 class http_response {
     response_status_line statusLine;
     http_headers headers;
-    bool skip_sending_message_body;
+    bool skipSendingMessageBody;
     FILE *fileHandle;
     size_t fileSize;
 
   public:
-    http_response(resource &r, std::string const &method);
+    http_response(resource &r, std::string const &method, bool closeCommunication = false);
     explicit http_response(nonfatal_http_communication_exception const &e);
     ~http_response();
 
     void send(FILE *stream);
-    void set_close_connection_header();
 };
 
 #endif // SIK_SKORELOWANE_SERWERY_HTTP_H

@@ -10,8 +10,11 @@ class tcp_server_generic_exception : public std::exception {
     virtual const char *get_default_message() const = 0;
 
   public:
-    tcp_server_generic_exception(){};
-    tcp_server_generic_exception(std::string msg) : customMessage(msg) {
+    const bool closeConnection;
+
+    tcp_server_generic_exception() : closeConnection(false){};
+    tcp_server_generic_exception(std::string msg, bool closeConnection = false)
+        : customMessage(msg), closeConnection(closeConnection) {
     }
 
     const char *what() const throw() {
@@ -69,7 +72,7 @@ class does_not_exist_error : public nonfatal_http_communication_exception {
     using nonfatal_http_communication_exception::nonfatal_http_communication_exception;
 };
 
-class client_closed_connection_error : public std::exception {};
 class no_request_to_read_exception : public std::exception {};
+class client_closed_connection_error : public no_request_to_read_exception {};
 
 #endif // SIK_SKORELOWANE_SERWERY_EXCEPTIONS_H
